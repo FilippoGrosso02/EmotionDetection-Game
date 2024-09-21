@@ -14,7 +14,7 @@ public class EmotionManager : MonoBehaviour
     }
 
     // Store the current emotion
-    private Emotion currentEmotion = Emotion.Happy;
+    private Emotion currentEmotion = Emotion.Neutral;
 
     // Reference to the TextMeshProUGUI component
     public TextMeshProUGUI emotionText;
@@ -51,7 +51,7 @@ public class EmotionManager : MonoBehaviour
             // Get emotion values from the EmotionFetcher
             float happiness = emotionFetcher.happiness;
             float neutral = emotionFetcher.neutral;
-            float sadness = emotionFetcher.sadness;
+            float sadness = emotionFetcher.sadness + emotionFetcher.angry;
 
             // Add values to the buffers
             AddToBuffer(happinessBuffer, happiness);

@@ -32,7 +32,7 @@ public class GameManager : MonoBehaviour
         // Reset the dialogue list
         if (dialogueManager != null)
         {
-            dialogueManager.ResetDialogueList();
+            //dialogueManager.ResetDialogueList();
         }
 
         // Reload the current scene

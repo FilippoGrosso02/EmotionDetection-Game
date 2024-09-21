@@ -37,12 +37,15 @@ public class EmotionChecker : MonoBehaviour
             if (!IsEmotionInDialogue(currentEmotion))
             {
                 Debug.Log("Current emotion is different from the emotions associated with the dialogue.");
+                Debug.Log("Associated Emotions: " + string.Join(", ", currentDialogue.associatedEmotions));
+
                 IncreaseStressScore(); // Increase stress when emotion is incorrect
 
                 if (stressScore >= maxStressThreshold)
                 {
-                    dialogueManager.StopGame();
-                    gameOverPanel.SetActive(true);
+                    dialogueManager.Fail();
+                    // dialogue stop
+
                 }
             }
             else
@@ -94,5 +97,11 @@ public class EmotionChecker : MonoBehaviour
         {
             Debug.LogWarning("Stress text reference is not set.");
         }
+    }
+
+    public void GameOver(){
+        Debug.Log("Game Over");
+        dialogueManager.StopGame();
+        gameOverPanel.SetActive(true);
     }
 }

@@ -10,18 +10,25 @@ public class DialogueManager : MonoBehaviour
     public EmotionChecker emotionChecker; // Reference to the EmotionChecker script
     public bool isGameStopped = false; // Boolean to stop the game
 
-    private List<Dialogue> dialogueList = new List<Dialogue>(); // List to store dialogue sequence
+    public List<Dialogue> openingDialogues; // List for opening dialogues
+    public List<Dialogue> mainDialogues; // List for main dialogues
+    public List<Dialogue> halfwayDialogues; // List for halfway dialogues
+    public List<Dialogue> failDialogues; // List for fail dialogues
+
     private bool canProceed = true; // This ensures you only proceed one dialogue at a time
     private Dialogue currentDialogue; // Store the current dialogue
-
     private Coroutine emotionCheckCoroutine; // Coroutine reference for emotion checking
     private float postDialogueBufferTime = 3f; // Buffer time after dialogue ends
+    private int dialogueStep = 0; // To track the step in the sequence
 
     void Start()
     {
-        dialogueList = new List<Dialogue>();
-    }
 
+    }
+    
+    public void StartDialogue(){
+        PlayNextDialogue();
+    }
     void Update()
     {
         // If the game is stopped, do nothing
@@ -34,16 +41,7 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    public void StartDialogue(List<Dialogue> dialogues)
-    {
-        // If the game is stopped, don't start dialogue
-        if (isGameStopped) return;
-
-        dialogueList.Clear();
-        dialogueList.AddRange(dialogues); // Store all dialogues in the list
-        PlayNextDialogue(); // Start playing the first dialogue
-    }
-
+    // Plays the next dialogue in the sequence (Opening -> Main -> Halfway -> Main)
     public void PlayNextDialogue()
     {
         // If the game is stopped, don't proceed with the next dialogue
@@ -52,22 +50,32 @@ public class DialogueManager : MonoBehaviour
         // Prevent skipping dialogue when audio is still playing
         canProceed = false;
 
-        // Select a random dialogue from the list
-        int randomIndex = Random.Range(0, dialogueList.Count);
-        currentDialogue = dialogueList[randomIndex];
-
-        dialogueText.text = currentDialogue.text; // Set the dialogue text in the TextMeshPro component
-
-        // Pass the current dialogue to EmotionChecker before playing the audio
-        if (emotionChecker != null)
+        switch (dialogueStep)
         {
-            emotionChecker.currentDialogue = currentDialogue; // Pass the dialogue to EmotionChecker
+            case 0:
+                // Pick a dialogue from the opening dialogues
+                currentDialogue = PickRandomDialogue(openingDialogues);
+                break;
+            case 1:
+            case 3:
+                // Pick a dialogue from the main dialogues (check emotions here)
+                currentDialogue = PickRandomDialogue(mainDialogues);
+                
+                break;
+            case 2:
+                // Pick a dialogue from the halfway dialogues
+                currentDialogue = PickRandomDialogue(halfwayDialogues);
+                break;
         }
+
+        emotionChecker.currentDialogue = currentDialogue;
+        dialogueText.text = currentDialogue.text; // Set the dialogue text in the TextMeshPro component
 
         if (currentDialogue.audioClip != null)
         {
             audioSource.clip = currentDialogue.audioClip;
             audioSource.Play();
+            Debug.Log("Start coroutine");
             StartCoroutine(WaitForAudioToFinish(currentDialogue.audioClip.length));
         }
         else
@@ -76,29 +84,47 @@ public class DialogueManager : MonoBehaviour
             canProceed = true;
             StartCoroutine(PostDialogueBuffer()); // Start post-dialogue buffer
         }
+
+        // Update dialogue step for the sequence
+// Sequence resets after main dialogues
+    }
+
+    // Method to randomly pick a dialogue from the list
+    private Dialogue PickRandomDialogue(List<Dialogue> dialogues)
+    {
+        if (dialogues == null || dialogues.Count == 0)
+        {
+            Debug.LogWarning("Dialogue list is empty!");
+            return null;
+        }
+
+        int randomIndex = Random.Range(0, dialogues.Count);
+        return dialogues[randomIndex];
     }
 
     // Coroutine to wait for the audio to finish playing before allowing the next dialogue
     private IEnumerator WaitForAudioToFinish(float duration)
     {
+        Debug.Log("Start coroutine");
         float halfDuration = duration / 2f;
 
         // Wait until the halfway point of the dialogue
         yield return new WaitForSeconds(halfDuration);
 
-        // Start checking emotions every 0.5 seconds after halfway point
-        emotionCheckCoroutine = StartCoroutine(CheckEmotionsPeriodically());
-
-        // Wait for the rest of the audio to finish
-        yield return new WaitForSeconds(halfDuration);
-
-        // Stop the emotion checking when the audio finishes
-        if (emotionCheckCoroutine != null)
+        // Start checking emotions only during main dialogues
+        if (dialogueStep == 1 || dialogueStep == 3)
         {
-            StopCoroutine(emotionCheckCoroutine);
+            emotionCheckCoroutine = StartCoroutine(CheckEmotionsPeriodically());
+            Debug.Log("Start emotion chjecking");
         }
 
-        StartCoroutine(PostDialogueBuffer()); // Start post-dialogue buffer after audio ends
+        // Wait for the rest of the audio to finish
+        yield return new WaitForSeconds(halfDuration );
+
+
+        StartCoroutine(PostDialogueBuffer()); 
+        
+
     }
 
     // Coroutine to check emotions every 0.5 seconds
@@ -107,14 +133,17 @@ public class DialogueManager : MonoBehaviour
         while (true)
         {
             CheckEmotions(); // Call the emotion checker
-            yield return new WaitForSeconds(0.5f); // Check every 0.5 seconds
+            yield return new WaitForSeconds(0.1f); // Check every 0.5 seconds
         }
     }
 
     // Coroutine for the post-dialogue buffer period (where emotion checking continues for 3 seconds)
     private IEnumerator PostDialogueBuffer()
     {
-        emotionCheckCoroutine = StartCoroutine(CheckEmotionsPeriodically()); // Keep checking emotions during buffer
+        if (dialogueStep == 0) dialogueStep = 1;
+        else if (dialogueStep == 1) dialogueStep = 2;
+        else if (dialogueStep == 2) dialogueStep = 1; // Start post-dialogue buffer after audio ends
+
         yield return new WaitForSeconds(postDialogueBufferTime); // Wait for 3 seconds
 
         if (emotionCheckCoroutine != null)
@@ -123,14 +152,7 @@ public class DialogueManager : MonoBehaviour
         }
 
         canProceed = true; // Now you can proceed to the next dialogue
-        PlayNextDialogue(); // Loop to the next random dialogue
-    }
-
-    void EndDialogue()
-    {
-        dialogueText.text = ""; // Clear text when dialogue ends
-        audioSource.Stop(); // Stop the audio when dialogue ends
-        canProceed = true; // Reset in case user starts new dialogue session
+        PlayNextDialogue(); // Loop to the next dialogue in the sequence
     }
 
     // Method to call the EmotionChecker to check emotions
@@ -138,7 +160,9 @@ public class DialogueManager : MonoBehaviour
     {
         if (emotionChecker != null)
         {
-            emotionChecker.CheckCurrentEmotion(); // Call the method to check the emotion
+            emotionChecker.CheckCurrentEmotion();
+            
+
         }
         else
         {
@@ -146,23 +170,52 @@ public class DialogueManager : MonoBehaviour
         }
     }
 
-    public void ResetDialogueList()
+    // Play fail dialogue and then stop the game
+    public void Fail(){
+        StartCoroutine(PlayFailDialogueAndStopGame());
+    }
+    private IEnumerator PlayFailDialogueAndStopGame()
     {
-        dialogueList.Clear(); // Clear the dialogue list
-        dialogueText.text = ""; // Clear the dialogue text
-        audioSource.Stop(); // Stop any playing audio
-        Debug.Log("Dialogue list has been reset.");
+        Debug.Log("Fail dialogue");
+        isGameStopped = true;
+        // Stop any currently playing audio or dialogue
+        audioSource.Stop();
+        //StopAllCoroutines(); // Stop all ongoing coroutines (like PostDialogueBuffer)
+
+        // Pick a fail dialogue
+        Dialogue failDialogue = PickRandomDialogue(failDialogues);
+
+        if (failDialogue != null)
+        {
+            // Show the fail dialogue text
+            dialogueText.text = failDialogue.text;
+
+            if (failDialogue.audioClip != null)
+            {
+                // Play the fail dialogue audio
+                audioSource.clip = failDialogue.audioClip;
+                audioSource.Play();
+                yield return new WaitForSeconds(failDialogue.audioClip.length);
+            }
+            else
+            {
+                // If no audio, wait for a few seconds
+                yield return new WaitForSeconds(3f); 
+            }
+        }
+
+        // After playing fail dialogue, stop the game
+        emotionChecker.GameOver();
+        StopAllCoroutines();
     }
 
-    // Method to stop the game (set isGameStopped to true)
     public void StopGame()
     {
         isGameStopped = true;
-        audioSource.Stop(); // Optionally stop any playing audio when the game is stopped
+        audioSource.Stop(); // Stop any playing audio
         Debug.Log("Game has been stopped.");
     }
 
-    // Method to resume the game (set isGameStopped to false)
     public void ResumeGame()
     {
         isGameStopped = false;
