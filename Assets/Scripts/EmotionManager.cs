@@ -17,7 +17,11 @@ public class EmotionManager : MonoBehaviour
     private Emotion currentEmotion = Emotion.Neutral;
 
     // Reference to the TextMeshProUGUI component
-    public TextMeshProUGUI emotionText;
+    public TextMeshPro emotionText;
+    public TextMeshPro emotionValue;
+
+
+    public DialController dialController;
 
     // Reference to the EmotionFetcher
     public EmotionFetcher emotionFetcher;
@@ -34,6 +38,7 @@ public class EmotionManager : MonoBehaviour
     {
         // Initialize the emotion text at the start
         UpdateEmotionText();
+        //emotionText = dialController.guessedEmotionText;
     }
 
     void Update()
@@ -95,14 +100,18 @@ public class EmotionManager : MonoBehaviour
         // Determine the prevalent averaged emotion
         if (avgHappiness > avgNeutral && avgHappiness > avgSadness)
         {
+            emotionValue.text = avgHappiness.ToString();
             SetCurrentEmotion("Happy");
+
         }
         else if (avgNeutral > avgHappiness && avgNeutral > avgSadness)
         {
+            emotionValue.text = avgNeutral.ToString();
             SetCurrentEmotion("Neutral");
         }
         else
         {
+            emotionValue.text = avgSadness.ToString();
             SetCurrentEmotion("Sad");
         }
     }
@@ -127,7 +136,7 @@ public class EmotionManager : MonoBehaviour
     {
         if (emotionText != null)
         {
-            emotionText.text = $"Current: {currentEmotion}";
+            emotionText.text = $"{currentEmotion}";
         }
         else
         {

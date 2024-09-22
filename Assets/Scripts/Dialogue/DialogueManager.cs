@@ -18,7 +18,7 @@ public class DialogueManager : MonoBehaviour
     private bool canProceed = true; // This ensures you only proceed one dialogue at a time
     private Dialogue currentDialogue; // Store the current dialogue
     private Coroutine emotionCheckCoroutine; // Coroutine reference for emotion checking
-    private float postDialogueBufferTime = 3f; // Buffer time after dialogue ends
+    public float postDialogueBufferTime = 3f; // Buffer time after dialogue ends
     private int dialogueStep = 0; // To track the step in the sequence
 
     public PointManager pointManager;
@@ -117,7 +117,7 @@ public class DialogueManager : MonoBehaviour
         float halfDuration = duration / 2f;
 
         // Wait until the halfway point of the dialogue
-        yield return new WaitForSeconds(halfDuration);
+        yield return new WaitForSeconds(2f);
 
         // Start checking emotions only during main dialogues
         if (dialogueStep == 1 || dialogueStep == 3)
@@ -127,7 +127,7 @@ public class DialogueManager : MonoBehaviour
         }
 
         // Wait for the rest of the audio to finish
-        yield return new WaitForSeconds(halfDuration );
+        yield return new WaitForSeconds(halfDuration  -2f);
 
 
         StartCoroutine(PostDialogueBuffer()); 
@@ -198,6 +198,10 @@ public class DialogueManager : MonoBehaviour
         // Pick a fail dialogue
         Dialogue failDialogue = PickRandomDialogue(failDialogues);
 
+        yield return new WaitForSeconds(2f);
+
+        emotionChecker.GameOver();
+
         if (failDialogue != null)
         {
             // Show the fail dialogue text
@@ -208,7 +212,7 @@ public class DialogueManager : MonoBehaviour
                 // Play the fail dialogue audio
                 audioSource.clip = failDialogue.audioClip;
                 audioSource.Play();
-                yield return new WaitForSeconds(failDialogue.audioClip.length);
+                yield return new WaitForSeconds(failDialogue.audioClip.length + 2f);
             }
             else
             {
@@ -218,7 +222,7 @@ public class DialogueManager : MonoBehaviour
         }
 
         // After playing fail dialogue, stop the game
-        emotionChecker.GameOver();
+        //emotionChecker.GameOver();
         StopAllCoroutines();
     }
 

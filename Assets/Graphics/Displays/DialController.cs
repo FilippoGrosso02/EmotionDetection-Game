@@ -20,16 +20,18 @@ public class DialController : MonoBehaviour
         float targetAngle = angleRange.x + angleRange.y; // given in degrees
 
         float stressNormalized = (stress + stressRange.x) / (stressRange.x + stressRange.y);
-        targetAngle = targetAngle * stressNormalized + angleRange.x;
+        targetAngle = targetAngle * (1.0f - stressNormalized) + angleRange.x;
 
 
         float angleDelta = targetAngle - needleTransform.eulerAngles.z;
 
-        needleTransform.Rotate(Vector3.forward, angleDelta * Time.deltaTime, Space.Self); // rotation is clockwise
+        needleTransform.Rotate(Vector3.forward, angleDelta * Time.deltaTime * 3f, Space.Self); // rotation is clockwise
     }
 
     // Emotion guess meter:
     public float guessConfidence;
+
+    public string currentEmotion;
     public Vector2 guessConfidenceRange; // (min, max)
     public Vector2 guessConfidenceDisplayRange; // (min, max), the range to which guess confidence is remapped
     public Emotion displayedEmotion;
@@ -49,18 +51,21 @@ public class DialController : MonoBehaviour
         {
             backGroundAnimator.setEmotion(parsedEmotion);
             Debug.Log("Emotion set to: " + parsedEmotion);
+            displayedEmotion = parsedEmotion;
         }
         else
         {
             Debug.LogWarning("Invalid emotion string: " + emotionString);
         }
+        
     }
     void updateGuessDisplay()
     {
-        float normalizedGuessConfidence = (guessConfidence + guessConfidenceRange.x) / (guessConfidenceRange.x + guessConfidenceRange.y);
+        /*float normalizedGuessConfidence = (guessConfidence + guessConfidenceRange.x) / (guessConfidenceRange.x + guessConfidenceRange.y);
         float remappedGuessConfidence = guessConfidence * (guessConfidenceDisplayRange.x + guessConfidenceDisplayRange.y) + guessConfidenceDisplayRange.x;
 
         confidenceText.text = remappedGuessConfidence.ToString("F1");
+        
 
 
         string guessedEmotionString = "NEUTRAL"; // assume "neutral" emotion as the default state
@@ -78,12 +83,14 @@ public class DialController : MonoBehaviour
         }
 
         guessedEmotionText.text = guessedEmotionString;
+        */
     }
 
 
     private void Update()
     {
         updateStressNeedle();
-        updateGuessDisplay();
+        //updateGuessDisplay();
+        
     }
 }
