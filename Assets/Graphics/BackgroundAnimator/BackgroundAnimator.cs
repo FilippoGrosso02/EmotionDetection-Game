@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-//using static UnityEditor.PlayerSettings;
+using static UnityEditor.PlayerSettings;
 
 public enum Emotion
 {
@@ -35,13 +35,32 @@ public class BackgroundAnimator : MonoBehaviour
     bool animationBuffered;
     bool coroutineIsRunning;
 
+    // intro logic:
+    public string titleFramesPath;
+    Texture2D[] titleFrames;
+
+    public bool enableStartGameSequence;
+    public bool gameStarted;
+    bool titleCoroutineRunning;
+
+
+    public string introSequencePath;
+    Texture2D[] introSequence;
+    bool introCoroutineRunning;
 
 
 
     void loadFrames()
     {
+        // emotions:
         neutralToHappyFrames = Resources.LoadAll<Texture2D>(neutralToHappyPath);
         neutralToSadFrames = Resources.LoadAll<Texture2D>(neutralToSadPath);
+
+        // title frames:
+        titleFrames = Resources.LoadAll<Texture2D>(titleFramesPath);
+
+        // intro sequence frames:
+        introSequence = Resources.LoadAll<Texture2D>(introSequencePath);
     }
 
 
@@ -96,6 +115,7 @@ public class BackgroundAnimator : MonoBehaviour
 
 
 
+
     // Start is called before the first frame update
     void Start()
     {
@@ -115,15 +135,13 @@ public class BackgroundAnimator : MonoBehaviour
     }
 
 
-
-    // Update is called once per frame
-    void Update()
+    public void runGameplayLogic()
     {
         if (debug_runAnimation)
         {
             animationBuffered = true;
 
-            
+
             debug_runAnimation = false;
         }
 
@@ -147,6 +165,82 @@ public class BackgroundAnimator : MonoBehaviour
             
         }
         */
+    }
+
+    public void startGame()
+    {
+        enableStartGameSequence = true;
+    }
+
+    public void runTitleLogic()
+    {
+        if (!titleCoroutineRunning && !enableStartGameSequence)
+            StartCoroutine(runTitleLoop());
+        else if (enableStartGameSequence && !introCoroutineRunning)
+        {
+            StopCoroutine(runTitleLoop());
+
+            //StartCoroutine(runIntroSequence());
+        }
+
+    }
+
+    private IEnumerator runTitleLoop() // use reverse to go from emotion to neutral state
+    {
+        titleCoroutineRunning = true;
+
+        int titleFrameIndex = 0;
+        while (!enableStartGameSequence)
+        {
+            Texture2D currentFrame = titleFrames[titleFrameIndex % titleFrames.Length];
+
+            targetMaterial.SetTexture("_Frame", currentFrame);
+
+
+            titleFrameIndex += 1;
+
+            yield return new WaitForSeconds(timePerFrame);
+        }
+
+        titleCoroutineRunning = false;
+
+        StartCoroutine(runIntroSequence());
+    }
+
+    private IEnumerator runIntroSequence() // use reverse to go from emotion to neutral state
+    {
+        introCoroutineRunning = true;
+
+        int introFrameIndex = 0;
+        while (introFrameIndex < introSequence.Length)
+        {
+            Texture2D currentFrame = introSequence[introFrameIndex % introSequence.Length];
+
+            targetMaterial.SetTexture("_Frame", currentFrame);
+
+
+            introFrameIndex += 1;
+
+            yield return new WaitForSeconds(0.5f * timePerFrame);
+        }
+
+        gameStarted = true;
+        introCoroutineRunning = false;
+    }
+
+
+
+    // Update is called once per frame
+    void Update()
+    {
+        if (gameStarted)
+        {
+            runGameplayLogic();
+        }
+        else
+        {
+            runTitleLogic();
+        }
         
 
         

@@ -7,6 +7,8 @@ public class IntroPanel : MonoBehaviour
     public DialogueManager dialogueManager;
     public EmotionFetcher emotionFetcher;
 
+    public BackgroundAnimator backgroundAnimator;
+
     public AudioManager audioManager;
     // Start is called before the first frame update
     void Start()
@@ -25,5 +27,6 @@ public class IntroPanel : MonoBehaviour
         dialogueManager.StartDialogue();
         gameObject.SetActive(false);
         audioManager.PlayGameTrack();
+        backgroundAnimator.enableStartGameSequence = true;
     }
 }
