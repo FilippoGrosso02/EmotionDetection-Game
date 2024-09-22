@@ -1,6 +1,8 @@
 import cv2
 from deepface import DeepFace
-from flask import Flask, jsonify
+from flask import Flask, jsonify, Response
+import threading
+import base64
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -8,21 +10,40 @@ app = Flask(__name__)
 # Load face cascade classifier
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# Create a global variable to store emotion
+# Create global variables to store emotion and video capture object
 detected_emotion = {}
+cap = None
 
 @app.route('/emotion', methods=['GET'])
 def get_emotion():
     return jsonify(detected_emotion)
 
+@app.route('/frame', methods=['GET'])
+def get_frame():
+    global cap
+    # Capture frame-by-frame
+    ret, frame = cap.read()
+
+    if not ret:
+        return jsonify({'error': 'Failed to capture frame'})
+
+    # Convert frame to JPG format and then to Base64
+    _, buffer = cv2.imencode('.jpg', frame)
+    frame_base64 = base64.b64encode(buffer).decode('utf-8')
+
+    # Send base64 encoded frame
+    return jsonify({'frame': frame_base64})
+
 def analyze_emotion():
     global detected_emotion
-    # Start capturing video
+    global cap
     cap = cv2.VideoCapture(0)
 
     while True:
-        # Capture frame-by-frame
         ret, frame = cap.read()
+
+        if not ret:
+            break
 
         # Convert frame to grayscale
         gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -39,7 +60,12 @@ def analyze_emotion():
 
             # Perform emotion analysis on the face ROI
             result = DeepFace.analyze(face_roi, actions=['emotion'], enforce_detection=False)
-            emotion = result[0]['emotion']
+
+            # Since DeepFace.analyze() returns a list, access the first element
+            if isinstance(result, list):
+                result = result[0]
+
+            emotion = result['emotion']  # Now access the 'emotion' key
 
             # Round emotion percentages
             for e in emotion:

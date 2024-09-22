@@ -21,6 +21,10 @@ public class DialogueManager : MonoBehaviour
     private float postDialogueBufferTime = 3f; // Buffer time after dialogue ends
     private int dialogueStep = 0; // To track the step in the sequence
 
+    public PointManager pointManager;
+
+    public DialController dialController;
+
     void Start()
     {
 
@@ -37,7 +41,7 @@ public class DialogueManager : MonoBehaviour
         // Check for user input, allow proceeding only when the audio isn't playing
         if (Input.GetKeyDown(KeyCode.Space) && canProceed)
         {
-            PlayNextDialogue();
+            //PlayNextDialogue();
         }
     }
 
@@ -61,7 +65,11 @@ public class DialogueManager : MonoBehaviour
                 // Pick a dialogue from the main dialogues (check emotions here)
                 currentDialogue = PickRandomDialogue(mainDialogues);
                 
+                // Set emotion using the string version of the emotion
+                dialController.setEmotion(currentDialogue.associatedEmotions[0].ToString());
+                
                 break;
+
             case 2:
                 // Pick a dialogue from the halfway dialogues
                 currentDialogue = PickRandomDialogue(halfwayDialogues);
@@ -141,7 +149,11 @@ public class DialogueManager : MonoBehaviour
     private IEnumerator PostDialogueBuffer()
     {
         if (dialogueStep == 0) dialogueStep = 1;
-        else if (dialogueStep == 1) dialogueStep = 2;
+        else if (dialogueStep == 1){ 
+            dialogueStep = 2;
+            pointManager.AddPoint(1);
+        }
+
         else if (dialogueStep == 2) dialogueStep = 1; // Start post-dialogue buffer after audio ends
 
         yield return new WaitForSeconds(postDialogueBufferTime); // Wait for 3 seconds
@@ -152,6 +164,7 @@ public class DialogueManager : MonoBehaviour
         }
 
         canProceed = true; // Now you can proceed to the next dialogue
+        
         PlayNextDialogue(); // Loop to the next dialogue in the sequence
     }
 
