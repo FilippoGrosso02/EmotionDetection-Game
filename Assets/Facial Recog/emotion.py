@@ -75,7 +75,7 @@ def analyze_emotion():
             detected_emotion = emotion
 
         # Show the frame with a rectangle (for visual feedback if needed)
-        cv2.imshow('Real-time Emotion Detection', frame)
+        cv2.imshow('Real-time Emotion Detection', frame)secretmessage_2c14.txt
 
         # Press 'q' to exit
         if cv2.waitKey(1) & 0xFF == ord('q'):
